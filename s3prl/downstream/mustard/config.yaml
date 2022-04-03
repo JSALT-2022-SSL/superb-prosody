@@ -1,0 +1,36 @@
+# Sarcasm detection task
+runner:
+  total_steps: 2000
+  gradient_clipping: 1
+  gradient_accumulate_steps: 1
+
+  log_step: 100
+  eval_step: 100
+  save_step: 500
+  max_keep: 3
+  eval_dataloaders: 
+    - dev
+    - test
+  
+optimizer:
+  name: TorchOptim
+  torch_optim_name: Adam
+  lr: 1.0e-4
+
+# # comment the whole scheduler config block to disable learning rate scheduling
+# scheduler:
+#   name: linear_schedule_with_warmup
+#   num_warmup_steps: 5000
+
+downstream_expert: 
+  datarc:
+    num_workers: 12
+    train_batch_size: 32
+    eval_batch_size: 1
+    max_timestep: 128000
+
+  modelrc:
+    projector_dim: 64
+    select: UtteranceLevel
+    UtteranceLevel:
+      pooling: MaxPooling
