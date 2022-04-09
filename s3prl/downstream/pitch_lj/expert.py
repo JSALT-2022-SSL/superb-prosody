@@ -29,7 +29,7 @@ from pathlib import Path
 
 SAMPLE_RATE = 16000
 
-
+DEBUG = False
 class DownstreamExpert(nn.Module):
     """
     Used to handle downstream-specific operations
@@ -59,8 +59,8 @@ class DownstreamExpert(nn.Module):
             output_dim = 1,
             **model_conf,
         )
-        self.loss_func = SimpleMSELoss()
-        self.register_buffer('best_loss', torch.Tensor(float('inf')))
+        self.loss_func = LogMSELoss()
+        self.register_buffer('best_loss', torch.ones(1) *float('inf'))
 
     def _get_train_dataloader(self, dataset):
         sampler = DistributedSampler(dataset) if is_initialized() else None
@@ -111,21 +111,18 @@ class DownstreamExpert(nn.Module):
         features = self.projector(features)
         predicted, _ = self.model(features, features_len)
 
-
-        print(mask.shape)
-        print(features_len)
-        print(predicted.shape, labels.shape)
+        if DEBUG:
+            print(mask.shape)
+            print(features_len)
+            print(predicted.shape, labels.shape)
 
         # Remove undefined frames
         well_defined_mask = (labels != 0)
         mask = mask * well_defined_mask
 
-        # print(predicted[0][:15])
-        # print(labels[0][:15])
-        # print(mask[0][:15])
-
         loss = self.loss_func(predicted, labels, mask)
-        print(loss)
+        if DEBUG:
+            print(loss)
 
         records['loss'].append(loss.item())
 
@@ -167,4 +164,16 @@ class SimpleMSELoss(nn.Module):
         pitch_predictions = pitch_predictions.masked_select(mask)
         pitch_targets = pitch_targets.masked_select(mask)
         pitch_loss = self.loss(pitch_predictions, pitch_targets)
+        return pitch_loss
+
+
+class LogMSELoss(nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.loss = nn.MSELoss()
+
+    def forward(self, pitch_predictions, pitch_targets, mask):
+        pitch_predictions = pitch_predictions.masked_select(mask)
+        pitch_targets = pitch_targets.masked_select(mask)
+        pitch_loss = self.loss(pitch_predictions, torch.log(pitch_targets))
         return pitch_loss
