@@ -124,7 +124,7 @@ class DownstreamExpert(nn.Module):
         loss = self.loss_func(predicted, labels, mask)
         if DEBUG:
             print(loss)
-
+        
         if torch.isfinite(loss):
             records['loss'].append(loss.item())
         else:
@@ -140,7 +140,7 @@ class DownstreamExpert(nn.Module):
         for key in ["loss"]:
             average = torch.FloatTensor(records[key]).mean().item()
             logger.add_scalar(
-                f'pitch-lj/{mode}-{key}',
+                f'pitch-libritts/{mode}-{key}',
                 average,
                 global_step=global_step
             )

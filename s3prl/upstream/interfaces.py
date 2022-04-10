@@ -259,5 +259,24 @@ class Featurizer(nn.Module):
         feature = self._select_feature(paired_features)
         if isinstance(feature, (list, tuple)):
             feature = self._weighted_sum(feature)
-
+            # visualize weights
+            # visualize(F.softmax(self.weights, dim=-1), "vis/fbank-logmse-w.jpg")        
         return self.tolist(paired_wavs, feature)
+
+
+import os
+import numpy as np
+import matplotlib.pyplot as plt
+def visualize(x, dst):
+    os.makedirs(os.path.dirname(dst), exist_ok=True)
+    x = x.detach().cpu().numpy()
+    layers = [str(i) for i in range(13)]
+    scores = x.tolist()
+    x = np.arange(len(layers))
+    plt.bar(x, scores)
+    plt.xticks(x, layers)
+    plt.xlabel('Layers')
+    plt.ylabel('Weight')
+    plt.title('Featurizer Weights')
+    plt.savefig(dst)
+    assert 1 == 2
