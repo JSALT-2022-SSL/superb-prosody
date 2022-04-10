@@ -22,7 +22,7 @@ from torch.utils.data import DataLoader, DistributedSampler
 from torch.distributed import is_initialized
 from torch.nn.utils.rnn import pad_sequence
 #-------------#
-from .model import *
+from ..model import *
 from .dataset import SarcasmDataset
 from argparse import Namespace
 from pathlib import Path
@@ -52,10 +52,10 @@ class DownstreamExpert(nn.Module):
         self.projector = nn.Linear(upstream_dim, self.modelrc['projector_dim'])
         self.model = model_cls(
             input_dim = self.modelrc['projector_dim'],
-            output_dim = 2,
+            output_dim = 1,
             **model_conf,
         )
-        self.objective = nn.CrossEntropyLoss()
+        self.objective = nn.BCEWithLogitsLoss()
         self.register_buffer('best_score', torch.zeros(1))
 
     def _get_train_dataloader(self, dataset):
@@ -93,12 +93,12 @@ class DownstreamExpert(nn.Module):
         features_len = torch.IntTensor([len(feat) for feat in features]).to(device=device)
         features = pad_sequence(features, batch_first=True)
         features = self.projector(features)
-        
-        predicted, _ = self.model(features, features_len)
-        labels = torch.LongTensor(labels).to(features.device)
-        loss = self.objective(predicted, labels)
 
-        predicted_classid = predicted.max(dim=-1).indices
+        predicted, _ = self.model(features, features_len)
+        labels = torch.FloatTensor(labels).to(features.device)
+        loss = self.objective(predicted.squeeze(dim=1), labels)
+
+        predicted_classid = torch.round(torch.sigmoid(predicted)).squeeze(dim=1)#predicted.max(dim=-1).indices
 
         records['loss'].append(loss.item())
         records['filename'] += file_ids
