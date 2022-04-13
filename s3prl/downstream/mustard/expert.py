@@ -43,7 +43,7 @@ class DownstreamExpert(nn.Module):
         self.modelrc = downstream_expert['modelrc']
         self.expdir = expdir
 
-        self.train_dataset = SarcasmDataset('train')
+        self.train_dataset = SarcasmDataset('train', downstream_expert['augmentation'])
         self.dev_dataset = SarcasmDataset('dev')
         self.test_dataset = SarcasmDataset('test')
         
