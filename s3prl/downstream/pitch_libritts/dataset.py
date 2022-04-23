@@ -16,12 +16,15 @@ import glob
 import tqdm
 import json
 import pyworld as pw
-from pathlib import Path
+import amfm_decompy.pYAAPT as pYAAPT
+import amfm_decompy.basic_tools as basic
+
 
 CACHE_PATH = os.path.join(os.path.dirname(__file__), '.cache/')
 SAMPLE_RATE = 16000
 
 DEBUG = False
+USEYAAPT = True
 # LibriTTS pitch reconstruction
 class PitchDataset(Dataset):
     def __init__(self, mode, file_path, meta_data, upstream_rate=160):
@@ -55,6 +58,8 @@ class PitchDataset(Dataset):
         self.dataset = dataset
 
         cache_path = os.path.join(CACHE_PATH, f'{mode}-labels-{self.fp}.pkl')
+        if USEYAAPT:
+            cache_path = os.path.join(CACHE_PATH, f'{mode}-yaapt-labels-{self.fp}.pkl')
         if os.path.isfile(cache_path):
             print(f'[Pitch Dataset] - Loading labels from {cache_path}')
             with open(cache_path, 'rb') as cache:
@@ -82,13 +87,24 @@ class PitchDataset(Dataset):
         # new_path_list = []
         for path in tqdm.tqdm(path_list, desc="Pitch extraction"):
             wav_path = self.name2path(path)
+            
+            # pyWorld
             wav, _ = librosa.load(wav_path, sr=SAMPLE_RATE)
             # if len(wav) <= 24000 * 15:
                 # new_path_list.append(path)
             pitch, t = pw.dio(wav.astype(np.float64), SAMPLE_RATE, frame_period=self.fp)
             pitch = pw.stonemask(wav.astype(np.float64), pitch, t, SAMPLE_RATE)
             y[path] = pitch
-        
+
+            # pYAAPT
+            signal = basic.SignalObj(wav_path)
+            pitch = pYAAPT.yaapt(signal, **{'f0_min' : 71.0, 'f0_max' : 800.0, 'frame_space' : self.fp})
+            f0 = pitch.samp_values.astype(np.float64)
+            dio_len = int(signal.size * 1000 / SAMPLE_RATE / 10) + 1
+            f0_pad = np.zeros(dio_len, dtype=np.float64)
+            f0_pad[:len(f0)] = f0
+            y[path] = f0
+
         # Removed later
         # record_path = os.path.join(CACHE_PATH, f'{self.mode}-filtered.txt')
         # with open(record_path, 'w', encoding='utf-8') as f:

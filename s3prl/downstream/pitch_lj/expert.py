@@ -53,9 +53,17 @@ class DownstreamExpert(nn.Module):
         
         model_cls = eval(self.modelrc['select'])
         model_conf = self.modelrc.get(self.modelrc['select'], {})
-        self.projector = nn.Linear(upstream_dim, self.modelrc['projector_dim'])
-        self.model = model_cls(
-            input_dim = self.modelrc['projector_dim'],
+
+        # self.projector = nn.Linear(upstream_dim, self.modelrc['projector_dim'])
+        # self.model = model_cls(
+        #     input_dim = upstream_dim,
+        #     hiddens = [self.modelrc['projector_dim']],
+        #     output_dim = 1,
+        #     **model_conf,
+        # )
+        self.addon_model = model_cls(
+            input_dim = upstream_dim,
+            hiddens = [1024],
             output_dim = 1,
             **model_conf,
         )
@@ -108,8 +116,13 @@ class DownstreamExpert(nn.Module):
 
         features = pad_sequence(features, batch_first=True)
         labels = pad_sequence(labels, batch_first=True).to(device=device)
-        features = self.projector(features)
-        predicted, _ = self.model(features, features_len)
+        
+        # Origin
+        # features = self.projector(features)
+        # predicted, _ = self.model(features, features_len)
+
+        # Addon experiment with fair parameters
+        predicted, _ = self.addon_model(features, features_len)
 
         if DEBUG:
             print(mask.shape)
