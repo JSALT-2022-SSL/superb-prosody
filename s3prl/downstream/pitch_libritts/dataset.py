@@ -71,6 +71,20 @@ class PitchDataset(Dataset):
 
         self.label = all_labels
 
+        cache_path = os.path.join(CACHE_PATH, f'{mode}-stats-{self.fp}.pkl')
+        if USEYAAPT:
+            cache_path = os.path.join(CACHE_PATH, f'{mode}-yaapt-stats-{self.fp}.pkl')
+        if os.path.isfile(cache_path) and 1 == 2:  # force not loading
+            print(f'[Pitch Dataset] - Loading stats from {cache_path}')
+            with open(cache_path, 'rb') as cache:
+                all_stats = pickle.load(cache)
+        else:
+            all_stats = self.build_stats()
+            with open(cache_path, 'wb') as cache:
+                pickle.dump(all_stats, cache)
+
+        self.norm_stat = all_stats
+
     def name2path(self, name):
         prefix = name.split('_')
         if self.mode == "train":
@@ -87,31 +101,41 @@ class PitchDataset(Dataset):
         # new_path_list = []
         for path in tqdm.tqdm(path_list, desc="Pitch extraction"):
             wav_path = self.name2path(path)
-            
-            # pyWorld
-            wav, _ = librosa.load(wav_path, sr=SAMPLE_RATE)
-            # if len(wav) <= 24000 * 15:
-                # new_path_list.append(path)
-            pitch, t = pw.dio(wav.astype(np.float64), SAMPLE_RATE, frame_period=self.fp)
-            pitch = pw.stonemask(wav.astype(np.float64), pitch, t, SAMPLE_RATE)
-            y[path] = pitch
 
-            # pYAAPT
-            signal = basic.SignalObj(wav_path)
-            pitch = pYAAPT.yaapt(signal, **{'f0_min' : 71.0, 'f0_max' : 800.0, 'frame_space' : self.fp})
-            f0 = pitch.samp_values.astype(np.float64)
-            dio_len = int(signal.size * 1000 / SAMPLE_RATE / 10) + 1
-            f0_pad = np.zeros(dio_len, dtype=np.float64)
-            f0_pad[:len(f0)] = f0
-            y[path] = f0
-
-        # Removed later
-        # record_path = os.path.join(CACHE_PATH, f'{self.mode}-filtered.txt')
-        # with open(record_path, 'w', encoding='utf-8') as f:
-        #     for line in new_path_list:
-        #         f.write(line + "\n")
+            if USEYAAPT:
+                # pYAAPT
+                signal = basic.SignalObj(wav_path)
+                dio_len = int(signal.size * 1000 / SAMPLE_RATE / 10) + 1
+                f0_pad = np.zeros(dio_len, dtype=np.float64)
+                try:
+                    pitch = pYAAPT.yaapt(signal, **{'f0_min' : 71.0, 'f0_max' : 800.0, 'frame_space' : self.fp})
+                    f0 = pitch.samp_values.astype(np.float64)
+                    f0_pad[:len(f0)] = f0
+                    y[path] = f0_pad
+                except:
+                    print("Error detected: ", wav_path)
+                    y[path] = f0_pad
+            else:
+                # pyWorld
+                wav, _ = librosa.load(wav_path, sr=SAMPLE_RATE)
+                pitch, t = pw.dio(wav.astype(np.float64), SAMPLE_RATE, frame_period=self.fp)
+                pitch = pw.stonemask(wav.astype(np.float64), pitch, t, SAMPLE_RATE)
+                y[path] = pitch
 
         return y
+    
+    def build_stats(self):
+        pitches = []
+        for path, pitch in tqdm.tqdm(self.label.items()):
+            for p in pitch:
+                if p == 0:
+                    continue
+                pitches.append(p)
+        n = len(pitches)
+        mean = sum(pitches) / n
+        variance = sum([((x - mean) ** 2) for x in pitches]) / n
+        std = variance ** 0.5
+        return (mean, std)
     
     def build_train_dataset(self):
         dataset = self.usage_list

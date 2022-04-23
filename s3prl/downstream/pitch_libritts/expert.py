@@ -53,20 +53,32 @@ class DownstreamExpert(nn.Module):
         
         model_cls = eval(self.modelrc['select'])
         model_conf = self.modelrc.get(self.modelrc['select'], {})
+
         # self.projector = nn.Linear(upstream_dim, self.modelrc['projector_dim'])
-        # self.model = model_cls(
-        #     input_dim = upstream_dim,
-        #     hiddens = [self.modelrc['projector_dim']],
-        #     output_dim = 1,
-        #     **model_conf,
-        # )
-        self.addon_model = model_cls(
+        self.model = model_cls(
             input_dim = upstream_dim,
-            hiddens = [1024],
             output_dim = 1,
             **model_conf,
         )
-        self.loss_func = LogMSELoss()
+
+        # Fair Experiment
+        # self.model = model_cls(
+        #     input_dim = upstream_dim,
+        #     hiddens = [1024],
+        #     output_dim = 1,
+        #     **model_conf,
+        # )
+
+        # Linear
+        # self.loss_func = SimpleMSELoss()
+
+        # Normalize
+        mean, std = self.train_dataset.norm_stat
+        self.loss_func = NormalizedMSELoss(mean, std)
+
+        # Log
+        # self.loss_func = LogMSELoss()
+
         self.register_buffer('best_loss', torch.ones(1) *float('inf'))
 
     def _get_train_dataloader(self, dataset):
@@ -118,10 +130,7 @@ class DownstreamExpert(nn.Module):
 
         # Origin
         # features = self.projector(features)
-        # predicted, _ = self.model(features, features_len)
-
-        # Addon experiment with fair parameters
-        predicted, _ = self.addon_model(features, features_len)
+        predicted, _ = self.model(features, features_len)
 
         if DEBUG:
             print(mask.shape)
@@ -182,6 +191,19 @@ class SimpleMSELoss(nn.Module):
         pitch_predictions = pitch_predictions.masked_select(mask)
         pitch_targets = pitch_targets.masked_select(mask)
         pitch_loss = self.loss(pitch_predictions, pitch_targets)
+        return pitch_loss
+
+
+class NormalizedMSELoss(nn.Module):
+    def __init__(self, mean: float, std: float):
+        super().__init__()
+        self.loss = nn.MSELoss()
+        self.mean, self.std, self.eps = mean, std, 1e-6
+
+    def forward(self, pitch_predictions, pitch_targets, mask):
+        pitch_predictions = pitch_predictions.masked_select(mask)
+        pitch_targets = pitch_targets.masked_select(mask)
+        pitch_loss = self.loss(pitch_predictions, (pitch_targets - self.mean) / self.std + self.eps)
         return pitch_loss
 
 
