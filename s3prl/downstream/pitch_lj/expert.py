@@ -55,29 +55,29 @@ class DownstreamExpert(nn.Module):
         model_conf = self.modelrc.get(self.modelrc['select'], {})
 
         # self.projector = nn.Linear(upstream_dim, self.modelrc['projector_dim'])
-        self.model = model_cls(
-            input_dim = upstream_dim,
-            output_dim = 1,
-            **model_conf,
-        )
-
-        # Fair Experiment
         # self.model = model_cls(
         #     input_dim = upstream_dim,
-        #     hiddens = [1024],
         #     output_dim = 1,
         #     **model_conf,
         # )
+
+        # Fair Experiment
+        self.model = model_cls(
+            input_dim = upstream_dim,
+            hiddens = [5],
+            output_dim = 1,
+            **model_conf,
+        )
 
         # Linear
         # self.loss_func = SimpleMSELoss()
 
         # Normalize
-        mean, std = self.train_dataset.norm_stat
-        self.loss_func = NormalizedMSELoss(mean, std)
+        # mean, std = self.train_dataset.norm_stat
+        # self.loss_func = NormalizedMSELoss(mean, std)
 
         # Log
-        # self.loss_func = LogMSELoss()
+        self.loss_func = LogMSELoss()
 
         self.register_buffer('best_loss', torch.ones(1) *float('inf'))
 

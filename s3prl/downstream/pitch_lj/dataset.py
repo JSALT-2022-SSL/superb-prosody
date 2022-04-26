@@ -24,7 +24,7 @@ CACHE_PATH = os.path.join(os.path.dirname(__file__), '.cache/')
 SAMPLE_RATE = 16000
 
 DEBUG = False
-USEYAAPT = True
+USEYAAPT = False
 # LJSpeech pitch reconstruction
 class PitchDataset(Dataset):
     def __init__(self, mode, file_path, meta_data, upstream_rate=160):
@@ -93,7 +93,7 @@ class PitchDataset(Dataset):
             if USEYAAPT:
                 # pYAAPT
                 signal = basic.SignalObj(wav_path)
-                dio_len = int(signal.size * 1000 / SAMPLE_RATE / 10) + 1
+                dio_len = int(signal.size * 1000 / SAMPLE_RATE / self.fp) + 1
                 f0_pad = np.zeros(dio_len, dtype=np.float64)
                 try:
                     pitch = pYAAPT.yaapt(signal, **{'f0_min' : 71.0, 'f0_max' : 800.0, 'frame_space' : self.fp})

@@ -24,7 +24,8 @@ CACHE_PATH = os.path.join(os.path.dirname(__file__), '.cache/')
 SAMPLE_RATE = 16000
 
 DEBUG = False
-USEYAAPT = True
+USEYAAPT = False
+USEBIN = True
 # LibriTTS pitch reconstruction
 class PitchDataset(Dataset):
     def __init__(self, mode, file_path, meta_data, upstream_rate=160):
@@ -60,6 +61,8 @@ class PitchDataset(Dataset):
         cache_path = os.path.join(CACHE_PATH, f'{mode}-labels-{self.fp}.pkl')
         if USEYAAPT:
             cache_path = os.path.join(CACHE_PATH, f'{mode}-yaapt-labels-{self.fp}.pkl')
+        if USEBIN:
+            cache_path = cache_path.replace('labels', 'bin_labels')
         if os.path.isfile(cache_path):
             print(f'[Pitch Dataset] - Loading labels from {cache_path}')
             with open(cache_path, 'rb') as cache:
@@ -105,7 +108,7 @@ class PitchDataset(Dataset):
             if USEYAAPT:
                 # pYAAPT
                 signal = basic.SignalObj(wav_path)
-                dio_len = int(signal.size * 1000 / SAMPLE_RATE / 10) + 1
+                dio_len = int(signal.size * 1000 / SAMPLE_RATE / self.fp) + 1
                 f0_pad = np.zeros(dio_len, dtype=np.float64)
                 try:
                     pitch = pYAAPT.yaapt(signal, **{'f0_min' : 71.0, 'f0_max' : 800.0, 'frame_space' : self.fp})

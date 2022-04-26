@@ -30,6 +30,7 @@ from pathlib import Path
 SAMPLE_RATE = 16000
 
 DEBUG = False
+USEBIN = True
 class DownstreamExpert(nn.Module):
     """
     Used to handle downstream-specific operations
@@ -57,14 +58,14 @@ class DownstreamExpert(nn.Module):
         # self.projector = nn.Linear(upstream_dim, self.modelrc['projector_dim'])
         self.model = model_cls(
             input_dim = upstream_dim,
-            output_dim = 1,
+            output_dim = 33,
             **model_conf,
         )
 
         # Fair Experiment
         # self.model = model_cls(
         #     input_dim = upstream_dim,
-        #     hiddens = [1024],
+        #     hiddens = [5],
         #     output_dim = 1,
         #     **model_conf,
         # )
@@ -73,13 +74,17 @@ class DownstreamExpert(nn.Module):
         # self.loss_func = SimpleMSELoss()
 
         # Normalize
-        mean, std = self.train_dataset.norm_stat
-        self.loss_func = NormalizedMSELoss(mean, std)
+        # mean, std = self.train_dataset.norm_stat
+        # self.loss_func = NormalizedMSELoss(mean, std)
 
         # Log
-        # self.loss_func = LogMSELoss()
+        self.loss_func = LogMSELoss()
 
-        self.register_buffer('best_loss', torch.ones(1) *float('inf'))
+        if USEBIN:
+            self.loss_func = nn.CrossEntropyLoss(ignore_index=0)
+
+        self.register_buffer('best_loss', torch.ones(1) * float('inf'))
+        self.register_buffer('best_acc', torch.ones(1) * float('-inf'))
 
     def _get_train_dataloader(self, dataset):
         sampler = DistributedSampler(dataset) if is_initialized() else None
@@ -137,17 +142,28 @@ class DownstreamExpert(nn.Module):
             print(features_len)
             print(predicted.shape, labels.shape)
 
-        # Remove undefined frames
-        nan_detect = torch.sum(features, dim=-1, keepdim=True)
-        well_defined_mask = torch.logical_and((labels != 0), (nan_detect == nan_detect))
-        mask = mask * well_defined_mask
+        if not USEBIN:
+            # Remove undefined frames
+            nan_detect = torch.sum(features, dim=-1, keepdim=True)
+            well_defined_mask = torch.logical_and((labels != 0), (nan_detect == nan_detect))
+            mask = mask * well_defined_mask
 
-        loss = self.loss_func(predicted, labels, mask)
+            loss = self.loss_func(predicted, labels, mask)
+        else:
+            labels = labels.squeeze(-1).long()
+            loss = self.loss_func(predicted.transpose(1, 2), labels)
+            denom = torch.sum(labels != 0)
+            numer = torch.sum((predicted.argmax(dim=2) == labels) * mask.squeeze(-1))
+            acc = numer / denom
         if DEBUG:
             print(loss)
+            if USEBIN:
+                print(acc)
         
         if torch.isfinite(loss):
             records['loss'].append(loss.item())
+            if USEBIN:
+                records['acc'].append(acc.item())
         else:
             loss = torch.zeros(1).to(device=device)
             if DEBUG:
@@ -158,7 +174,10 @@ class DownstreamExpert(nn.Module):
     # interface
     def log_records(self, mode, records, logger, global_step, **kwargs):
         save_names = []
-        for key in ["loss"]:
+        keys = ["loss"]
+        if USEBIN:
+            keys += ["acc"]
+        for key in keys:
             average = torch.FloatTensor(records[key]).mean().item()
             logger.add_scalar(
                 f'pitch-libritts/{mode}-{key}',
@@ -166,18 +185,31 @@ class DownstreamExpert(nn.Module):
                 global_step=global_step
             )
             with open(Path(self.expdir) / "log.log", 'a') as f:
-                if key == 'loss':
-                    print(f"{mode} {key}: {average}")
-                    f.write(f'{mode} at step {global_step}: {average}\n')
-                    if mode == 'dev' and average < self.best_loss:
-                        self.best_loss = torch.ones(1) * average
-                        f.write(f'New best on {mode} at step {global_step}: {average}\n')
-                        save_names.append(f'{mode}-best.ckpt')
+                if not USEBIN:
+                    if key == 'loss':
+                        print(f"{mode} {key}: {average}")
+                        f.write(f'{mode} at step {global_step}: {average}\n')
+                        if mode == 'dev' and average < self.best_loss:
+                            self.best_loss = torch.ones(1) * average
+                            f.write(f'New best on {mode} at step {global_step}: {average}\n')
+                            save_names.append(f'{mode}-best.ckpt')
+                else:
+                    if key == 'acc':
+                        print(f"{mode} {key}: {average}")
+                        f.write(f'{mode} at step {global_step}: {average}\n')
+                        if mode == 'dev' and average > self.best_acc:
+                            self.best_acc = torch.ones(1) * average
+                            f.write(f'New best on {mode} at step {global_step}: {average}\n')
+                            save_names.append(f'{mode}-best.ckpt')
 
         if mode in ["dev", "test"]:
             with open(Path(self.expdir) / f"{mode}_loss.txt", "w") as file:
                 lines = [f"{x}\n" for x in records["loss"]]
                 file.writelines(lines)
+            if USEBIN:
+                with open(Path(self.expdir) / f"{mode}_acc.txt", "w") as file:
+                    lines = [f"{x}\n" for x in records["acc"]]
+                    file.writelines(lines)
 
         return save_names
 
