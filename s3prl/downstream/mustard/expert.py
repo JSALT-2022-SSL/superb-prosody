@@ -26,6 +26,7 @@ from ..model import *
 from .dataset import SarcasmDataset
 from argparse import Namespace
 from pathlib import Path
+from sklearn.decomposition import PCA
 from sklearn.metrics import f1_score, precision_score, recall_score
 
 
@@ -41,6 +42,7 @@ class DownstreamExpert(nn.Module):
         self.downstream = downstream_expert
         self.datarc = downstream_expert['datarc']
         self.modelrc = downstream_expert['modelrc']
+        self.project = self.modelrc['project']
         self.expdir = expdir
 
         self.train_dataset = SarcasmDataset('train', downstream_expert['augmentation'])
@@ -49,12 +51,27 @@ class DownstreamExpert(nn.Module):
         
         model_cls = eval(self.modelrc['select'])
         model_conf = self.modelrc.get(self.modelrc['select'], {})
-        self.projector = nn.Linear(upstream_dim, self.modelrc['projector_dim'])
-        self.model = model_cls(
-            input_dim = self.modelrc['projector_dim'],
-            output_dim = 1,
-            **model_conf,
-        )
+
+        if downstream_expert.get('pca') is not None:
+            self.pca = PCA(n_components=downstream_expert['pca']['n_dim'])
+            upstream_dim = downstream_expert['pca']['n_dim']
+        else:
+            self.pca = None
+
+        if self.project:
+            self.projector = nn.Linear(upstream_dim, self.modelrc['projector_dim'])
+            self.model = model_cls(
+                input_dim = self.modelrc['projector_dim'],
+                output_dim = 1,
+                **model_conf,
+            )
+        else:
+            self.model = model_cls(
+                input_dim = upstream_dim,
+                output_dim = 1,
+                **model_conf,
+            )
+
         self.objective = nn.BCEWithLogitsLoss()
         self.register_buffer('best_score', torch.zeros(1))
 
@@ -90,9 +107,16 @@ class DownstreamExpert(nn.Module):
     # Interface
     def forward(self, mode, features, labels, file_ids, records, **kwargs):
         device = features[0].device
+        if self.pca is not None:
+            features_flat = torch.cat(features, dim=0).detach().cpu().numpy()
+            if features_flat.shape[0] > self.pca.n_components:
+                self.pca.fit(features_flat)
+            features = [torch.from_numpy(self.pca.transform(feature.detach().cpu().numpy())).to(device) for feature in features]
+
         features_len = torch.IntTensor([len(feat) for feat in features]).to(device=device)
         features = pad_sequence(features, batch_first=True)
-        features = self.projector(features)
+        if self.project:
+            features = self.projector(features)
 
         predicted, _ = self.model(features, features_len)
         labels = torch.FloatTensor(labels).to(features.device)

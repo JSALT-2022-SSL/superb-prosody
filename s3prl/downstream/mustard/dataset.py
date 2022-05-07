@@ -9,7 +9,7 @@ from torch.utils.data.dataset import Dataset
 from torch.utils.data import DataLoader
 import torchaudio
 from torchaudio import transforms
-from audiomentations import Compose, AddGaussianNoise, TimeStretch, Shift, Gain
+from audiomentations import Compose, AddGaussianNoise, AddGaussianSNR, TimeStretch, Shift, PitchShift, Gain
 
 BASE_PATH = Path('./downstream/mustard/data')
 DATA_PATH = BASE_PATH / 'sarcasm_data.json'
@@ -40,7 +40,7 @@ class SarcasmDataset(Dataset):
         label = int(self.dataset_dict[file_id]['sarcasm'])
 
         if self.aug_config:
-            Reference: https://github.com/iver56/audiomentations#waveform
+            # Reference: https://github.com/iver56/audiomentations#waveform
             aug_list = []
             for aug, params in self.aug_config.items():
                 aug_func = eval(aug)
