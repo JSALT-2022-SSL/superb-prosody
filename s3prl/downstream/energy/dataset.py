@@ -24,10 +24,8 @@ CACHE_PATH = os.path.join(os.path.dirname(__file__), '.cache/')
 SAMPLE_RATE = 16000
 
 DEBUG = False
-USEYAAPT = True
-USEBIN = False
-# LibriTTS pitch reconstruction
-class PitchDataset(Dataset):
+# LibriTTS energy reconstruction
+class EnergyDataset(Dataset):
     def __init__(self, mode, file_path, meta_data, upstream_rate=160):
         
         self.mode = mode
@@ -46,7 +44,7 @@ class PitchDataset(Dataset):
 
         cache_path = os.path.join(CACHE_PATH, f'{mode}-{self.fp}.pkl')
         if os.path.isfile(cache_path):
-            print(f'[Pitch Dataset] - Loading file paths from {cache_path}')
+            print(f'[Energy Dataset] - Loading file paths from {cache_path}')
             with open(cache_path, 'rb') as cache:
                 dataset = pickle.load(cache)
         else:
@@ -54,17 +52,13 @@ class PitchDataset(Dataset):
             os.makedirs(os.path.dirname(cache_path), exist_ok=True)
             with open(cache_path, 'wb') as cache:
                 pickle.dump(dataset, cache)
-        print(f'[Pitch Dataset] - there are {len(dataset)} files found')
+        print(f'[Energy Dataset] - there are {len(dataset)} files found')
 
         self.dataset = dataset
 
         cache_path = os.path.join(CACHE_PATH, f'{mode}-labels-{self.fp}.pkl')
-        if USEYAAPT:
-            cache_path = os.path.join(CACHE_PATH, f'{mode}-yaapt-labels-{self.fp}.pkl')
-        if USEBIN:
-            cache_path = cache_path.replace('labels', 'bin_labels')
         if os.path.isfile(cache_path):
-            print(f'[Pitch Dataset] - Loading labels from {cache_path}')
+            print(f'[Energy Dataset] - Loading labels from {cache_path}')
             with open(cache_path, 'rb') as cache:
                 all_labels = pickle.load(cache)
         else:
@@ -75,10 +69,8 @@ class PitchDataset(Dataset):
         self.label = all_labels
 
         cache_path = os.path.join(CACHE_PATH, f'{mode}-stats-{self.fp}.pkl')
-        if USEYAAPT:
-            cache_path = os.path.join(CACHE_PATH, f'{mode}-yaapt-stats-{self.fp}.pkl')
         if os.path.isfile(cache_path):
-            print(f'[Pitch Dataset] - Loading stats from {cache_path}')
+            print(f'[Energy Dataset] - Loading stats from {cache_path}')
             with open(cache_path, 'rb') as cache:
                 all_stats = pickle.load(cache)
         else:
@@ -101,42 +93,26 @@ class PitchDataset(Dataset):
 
     def build_label(self, path_list):
         y = {}
-        # new_path_list = []
         for path in tqdm.tqdm(path_list, desc="Pitch extraction"):
             wav_path = self.name2path(path)
-
-            if USEYAAPT:
-                # pYAAPT
-                signal = basic.SignalObj(wav_path)
-                dio_len = int(signal.size * 1000 / SAMPLE_RATE / self.fp) + 1
-                f0_pad = np.zeros(dio_len, dtype=np.float64)
-                try:
-                    pitch = pYAAPT.yaapt(signal, **{'f0_min' : 71.0, 'f0_max' : 800.0, 'frame_space' : self.fp})
-                    f0 = pitch.samp_values.astype(np.float64)
-                    f0_pad[:len(f0)] = f0
-                    y[path] = f0_pad
-                except:
-                    print("Error detected: ", wav_path)
-                    y[path] = f0_pad
-            else:
-                # pyWorld
-                wav, _ = librosa.load(wav_path, sr=SAMPLE_RATE)
-                pitch, t = pw.dio(wav.astype(np.float64), SAMPLE_RATE, frame_period=self.fp)
-                pitch = pw.stonemask(wav.astype(np.float64), pitch, t, SAMPLE_RATE)
-                y[path] = pitch
+            wav, _ = librosa.load(wav_path, sr=SAMPLE_RATE)
+            # dio_len = int(wav.size * 1000 / SAMPLE_RATE / self.fp) + 1
+            mag, phase = librosa.magphase(librosa.stft(wav, n_fft=1024, hop_length=self.upstream_rate))
+            energy = np.linalg.norm(mag, axis=0)
+            y[path] = energy
 
         return y
     
     def build_stats(self):
-        pitches = []
-        for path, pitch in tqdm.tqdm(self.label.items()):
-            for p in pitch:
+        energies = []
+        for path, energy in tqdm.tqdm(self.label.items()):
+            for p in energy:
                 if p == 0:
                     continue
-                pitches.append(p)
-        n = len(pitches)
-        mean = sum(pitches) / n
-        variance = sum([((x - mean) ** 2) for x in pitches]) / n
+                energies.append(p)
+        n = len(energies)
+        mean = sum(energies) / n
+        variance = sum([((x - mean) ** 2) for x in energies]) / n
         std = variance ** 0.5
         return (mean, std)
     

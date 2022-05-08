@@ -12,7 +12,6 @@
 ###############
 import os
 import math
-from turtle import color
 import torch
 import random
 import pathlib
@@ -24,7 +23,7 @@ from torch.distributed import is_initialized
 from torch.nn.utils.rnn import pad_sequence
 #-------------#
 from ..model import *
-from .dataset import PitchDataset
+from .dataset import EnergyDataset
 from argparse import Namespace
 from pathlib import Path
 
@@ -49,9 +48,9 @@ class DownstreamExpert(nn.Module):
 
         root_dir = Path(self.datarc['file_path'])
 
-        self.train_dataset = PitchDataset('train', root_dir, self.datarc['meta_data'], upstream_rate=upstream_rate)
-        self.dev_dataset = PitchDataset('dev', root_dir, self.datarc['meta_data'], upstream_rate=upstream_rate)
-        self.test_dataset = PitchDataset('test', root_dir, self.datarc['meta_data'], upstream_rate=upstream_rate)
+        self.train_dataset = EnergyDataset('train', root_dir, self.datarc['meta_data'], upstream_rate=upstream_rate)
+        self.dev_dataset = EnergyDataset('dev', root_dir, self.datarc['meta_data'], upstream_rate=upstream_rate)
+        self.test_dataset = EnergyDataset('test', root_dir, self.datarc['meta_data'], upstream_rate=upstream_rate)
         
         model_cls = eval(self.modelrc['select'])
         model_conf = self.modelrc.get(self.modelrc['select'], {})
@@ -59,7 +58,7 @@ class DownstreamExpert(nn.Module):
         # self.projector = nn.Linear(upstream_dim, self.modelrc['projector_dim'])
         self.model = model_cls(
             input_dim = upstream_dim,
-            output_dim = 33 if USEBIN else 1,
+            output_dim = 1,
             **model_conf,
         )
 
@@ -85,7 +84,7 @@ class DownstreamExpert(nn.Module):
             self.loss_func = nn.CrossEntropyLoss(ignore_index=0)
 
         self.register_buffer('best_loss', torch.ones(1) * float('inf'))
-        # self.register_buffer('best_acc', torch.ones(1) * float('-inf'))
+        self.register_buffer('best_acc', torch.ones(1) * float('-inf'))
 
     def _get_train_dataloader(self, dataset):
         sampler = DistributedSampler(dataset) if is_initialized() else None
@@ -139,9 +138,10 @@ class DownstreamExpert(nn.Module):
         predicted, _ = self.model(features, features_len)
 
         if DEBUG:
-            print(mask.shape)
-            print(features_len)
-            print(predicted.shape, labels.shape)
+            print(torch.mean(labels))
+            # print(mask.shape)
+            # print(features_len)
+            # print(predicted.shape, labels.shape)
 
         if not USEBIN:
             # Remove undefined frames
@@ -162,8 +162,6 @@ class DownstreamExpert(nn.Module):
                 print(acc)
         
         if torch.isfinite(loss):
-            if mode == "test":
-                self.__vis_prediction(predicted[0][:features_len[0]], labels[0][:features_len[0]], records)
             records['loss'].append(loss.item())
             if USEBIN:
                 records['acc'].append(acc.item())
@@ -174,14 +172,6 @@ class DownstreamExpert(nn.Module):
 
         return loss
 
-    def __vis_prediction(self, pred, label, records):
-        import numpy as np
-        pred = pred.detach().cpu().numpy().squeeze(1)
-        pred = np.exp(pred)
-        pred[pred < 2] = 0
-        label = label.detach().cpu().numpy().squeeze(1)
-        records["vis"].append((pred, label))
-
     # interface
     def log_records(self, mode, records, logger, global_step, **kwargs):
         save_names = []
@@ -191,7 +181,7 @@ class DownstreamExpert(nn.Module):
         for key in keys:
             average = torch.FloatTensor(records[key]).mean().item()
             logger.add_scalar(
-                f'pitch-libritts/{mode}-{key}',
+                f'energy-libritts/{mode}-{key}',
                 average,
                 global_step=global_step
             )
@@ -221,20 +211,6 @@ class DownstreamExpert(nn.Module):
                 with open(Path(self.expdir) / f"{mode}_acc.txt", "w") as file:
                     lines = [f"{x}\n" for x in records["acc"]]
                     file.writelines(lines)
-
-        # Visualization
-        from matplotlib import pyplot as plt
-        import numpy as np
-        os.makedirs("result/vis", exist_ok=True)
-        if mode in ["test"]:
-            for i, (pred, label) in enumerate(records["vis"]):
-                plt.plot(np.arange(len(pred)), pred, color='r', label='Prediction')
-                plt.plot(np.arange(len(label)), label, color='b', label='Groundtruth')
-                plt.legend()
-                plt.savefig(f"result/vis/{i}.png")
-                plt.clf()
-                if i == 9:
-                    break
 
         return save_names
 
