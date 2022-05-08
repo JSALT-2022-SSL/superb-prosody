@@ -14,7 +14,7 @@ import os
 import math
 import torch
 import random
-import pathlib
+import jsonlines
 #-------------#
 import torch
 import torch.nn as nn
@@ -26,7 +26,7 @@ from ..model import *
 from .dataset import SarcasmDataset
 from argparse import Namespace
 from pathlib import Path
-from sklearn.metrics import f1_score, precision_score, recall_score
+from sklearn.metrics import classification_report
 
 
 class DownstreamExpert(nn.Module):
@@ -43,9 +43,11 @@ class DownstreamExpert(nn.Module):
         self.modelrc = downstream_expert['modelrc']
         self.expdir = expdir
 
-        self.train_dataset = SarcasmDataset('train', downstream_expert['augmentation'])
-        self.dev_dataset = SarcasmDataset('dev')
-        self.test_dataset = SarcasmDataset('test')
+        speaker_dependent = self.datarc['speaker_dependent']
+        split_no = self.datarc['split_no'] if speaker_dependent else None
+        aug_config = downstream_expert['augmentation'] if 'augmentation' in downstream_expert else None
+        self.train_dataset = SarcasmDataset('train', speaker_dependent, split_no, aug_config)
+        self.dev_dataset = SarcasmDataset('dev', speaker_dependent, split_no, aug_config)
         
         model_cls = eval(self.modelrc['select'])
         model_conf = self.modelrc.get(self.modelrc['select'], {})
@@ -110,36 +112,29 @@ class DownstreamExpert(nn.Module):
     # interface
     def log_records(self, mode, records, logger, global_step, **kwargs):
         save_names = []
-
-        for key in ['precision', 'recall', 'f1', 'loss']:
-            if key != 'loss':
-                
-                score = eval(f'{key}_score(records["truth"], records["predict"])')
-                print(f"{mode} {key}: {score}")
-
-                with open(Path(self.expdir) / "log.log", 'a') as f:
-                    f.write(f'{mode} {key} at step {global_step}: {score}\n')
-                    if mode == 'dev' and key == 'f1' and score > self.best_score:
-                        self.best_score = torch.ones(1) * score
-                        f.write(f'New best on {mode} at step {global_step}: {score}\n')
-                        save_names.append(f'{mode}-best.ckpt')
-
-            else:
-                score = torch.FloatTensor(records[key]).mean().item()
-
+        result = classification_report(records["truth"], records["predict"], output_dict=True, digits=3)
+        metric_obj = {'step': global_step}
+        for metric in ['precision', 'recall', 'f1-score']:
+            score = result['weighted avg'][metric]
+            metric_obj[metric] = score
+            print(f'{mode} {metric}: {score}')
             logger.add_scalar(
-                f'mustard/{mode}-{key}',
+                f'mustard/{mode}-{metric}',
                 score,
                 global_step=global_step
             )
 
-        # if mode in ["dev", "test"]:
-        #     with open(Path(self.expdir) / f"{mode}_predict.txt", "w") as file:
-        #         lines = [f"{f} {p}\n" for f, p in zip(records["filename"], records["predict"])]
-        #         file.writelines(lines)
+            if mode == 'dev' and metric == 'f1-score' and score > self.best_score:
+                self.best_score = torch.ones(1) * score
+                save_names.append(f'{mode}-best.ckpt')
 
-        #     with open(Path(self.expdir) / f"{mode}_truth.txt", "w") as file:
-        #         lines = [f"{f} {l}\n" for f, l in zip(records["filename"], records["truth"])]
-        #         file.writelines(lines)
+        with jsonlines.open(os.path.join(self.expdir, 'metrics.jsonl'), mode='a') as writer:
+            writer.write(metric_obj)
+
+        logger.add_scalar(
+            f'mustard/{mode}-loss',
+            torch.FloatTensor(records['loss']).mean().item(),
+            global_step=global_step
+        )                          
 
         return save_names

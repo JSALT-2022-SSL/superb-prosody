@@ -4,18 +4,17 @@ runner:
   gradient_clipping: 1
   gradient_accumulate_steps: 1
 
-  log_step: 50
-  eval_step: 50
-  save_step: 50
-  max_keep: 3
+  log_step: 20
+  eval_step: 20
+  save_step: 20
+  max_keep: 1
   eval_dataloaders: 
     - dev
-    - test
   
 optimizer:
   name: TorchOptim
   torch_optim_name: Adam
-  lr: 5.0e-5
+  lr: 3.0e-5
 
 # # comment the whole scheduler config block to disable learning rate scheduling
 # scheduler:
@@ -28,6 +27,7 @@ downstream_expert:
     train_batch_size: 32
     eval_batch_size: 1
     max_timestep: 128000
+    speaker_dependent: False
 
   # Please refer to https://github.com/iver56/audiomentations for more augmentation options
   augmentation:
