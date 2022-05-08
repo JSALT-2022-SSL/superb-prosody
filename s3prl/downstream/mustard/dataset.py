@@ -10,7 +10,7 @@ from torch.utils.data.dataset import Dataset
 from torch.utils.data import DataLoader
 import torchaudio
 from torchaudio import transforms
-from audiomentations import Compose, AddGaussianNoise, TimeStretch, Shift, Gain
+from audiomentations import Compose, AddGaussianNoise, AddGaussianSNR, TimeStretch, Shift, PitchShift, Gain
 
 BASE_PATH = Path('./downstream/mustard/data')
 DATA_PATH = BASE_PATH / 'sarcasm_data.json'

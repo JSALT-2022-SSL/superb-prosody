@@ -1,20 +1,21 @@
 # Sarcasm detection task
 runner:
-  total_steps: 500
+  total_steps: 3000
   gradient_clipping: 1
   gradient_accumulate_steps: 1
 
-  log_step: 20
-  eval_step: 20
-  save_step: 20
-  max_keep: 1
+  log_step: 50
+  eval_step: 50
+  save_step: 50
+  max_keep: 60
   eval_dataloaders: 
     - dev
+    - test
   
 optimizer:
   name: TorchOptim
   torch_optim_name: Adam
-  lr: 3.0e-5
+  lr: 5.0e-6
 
 # # comment the whole scheduler config block to disable learning rate scheduling
 # scheduler:
@@ -23,17 +24,16 @@ optimizer:
 
 downstream_expert: 
   datarc:
-    num_workers: 12
-    train_batch_size: 32
+    num_workers: 4
+    train_batch_size: 8
     eval_batch_size: 1
     max_timestep: 128000
-    speaker_dependent: False
 
   # Please refer to https://github.com/iver56/audiomentations for more augmentation options
   augmentation:
-    AddGaussianNoise:
-      min_amplitude: 0.001
-      max_amplitude: 0.015
+    AddGaussianSNR:
+      min_snr_in_db: 0
+      max_snr_in_db: 3
       p: 0.5
 
     TimeStretch:
@@ -41,9 +41,14 @@ downstream_expert:
       max_rate: 1.25
       p: 0.5
 
-    Shift:
-      min_fraction: -0.5
-      max_fraction: 0.5
+    # Shift:
+    #   min_fraction: -0.5
+    #   max_fraction: 0.5
+    #   p: 0.5
+
+    PitchShift:
+      min_semitones: -4
+      max_semitones: 4
       p: 0.5
 
     Gain:
@@ -53,7 +58,7 @@ downstream_expert:
 
   modelrc:
     project: True
-    projector_dim: 64
+    projector_dim: 768
     select: UtteranceLevel
     UtteranceLevel:
       pooling: MeanPooling
