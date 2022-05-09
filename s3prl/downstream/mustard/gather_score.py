@@ -6,9 +6,9 @@ from pathlib import Path
 def collect_metrics(expname):
     fold_list = []
     for i in range(5):
-        expname = f'{expname}-fold-{i}'
+        fold = f'{expname}-fold-{i}'
         root_dir = Path('result')
-        metrics_path = f'result/downstream/{expname}/metrics.json'
+        metrics_path = f'result/downstream/{fold}/metrics.jsonl'
     
         with jsonlines.open(metrics_path, 'r') as reader:
             metric_list = [obj for obj in reader]
@@ -19,12 +19,12 @@ def collect_metrics(expname):
 
 def cv_score(fold_list):
     best_step, best_precision, best_recall, best_f1 = 0, 0, 0, 0
-    for i in range(len(fold_list[0])):
+    for i in range(1, len(fold_list[0]), 2):
         step = fold_list[0][i]['step']
         precision = np.mean([fold_list[j][i]['precision'] for j in range(5)])
         recall = np.mean([fold_list[j][i]['recall'] for j in range(5)])
         f1 = np.mean([fold_list[j][i]['f1-score'] for j in range(5)])
-        print('step: {step}, f1: {f1}, precision: {precision}, recall: {recall}')
+        # print(f'step: {step}, f1: {f1}, precision: {precision}, recall: {recall}')
         if f1 > best_f1:
             best_f1 = f1
             best_precision = precision
@@ -32,7 +32,7 @@ def cv_score(fold_list):
             best_step = step
         
     print('Best Score')
-    print('step: {best_step}, f1: {best_f1}, precision: {best_precision}, recall: {best_recall}')
+    print(f'step: {best_step}, f1: {best_f1}, precision: {best_precision}, recall: {best_recall}')
 
 
 def main():
@@ -41,6 +41,7 @@ def main():
     args = parser.parse_args()
 
     fold_list = collect_metrics(args.expname)
+    cv_score(fold_list)
 
 
 if __name__ == '__main__':

@@ -151,8 +151,9 @@ class DownstreamExpert(nn.Module):
                 self.best_score = torch.ones(1) * score
                 save_names.append(f'{mode}-best.ckpt')
 
-        with jsonlines.open(os.path.join(self.expdir, 'metrics.jsonl'), mode='a') as writer:
-            writer.write(metric_obj)
+        if mode == 'dev':
+            with jsonlines.open(os.path.join(self.expdir, 'metrics.jsonl'), mode='a') as writer:
+                writer.write(metric_obj)
 
         logger.add_scalar(
             f'mustard/{mode}-loss',
