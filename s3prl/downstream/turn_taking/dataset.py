@@ -12,13 +12,13 @@ class MaptaskDataset(Dataset):
     # need to pass frame size
     def __init__(
             self, 
-            targets_path, 
+            targets_path,
             dialogues_path, 
             id_list, 
             mode='train',
             predict_size=3,
             frame_size=50, 
-            sample_rate=20000, 
+            sample_rate=16000, 
             wav_size=60
         ):
 
@@ -41,7 +41,6 @@ class MaptaskDataset(Dataset):
         # number of frames in a prediction window
         self.n_predict_frame = int(self.predict_size * 1000 / self.frame_size)
         self.stride = int(sample_rate * (self.frame_size/1000))
-        
         self.time_units_f = []
         self.time_units_g = []
         for idx in self.id_list:
@@ -50,7 +49,7 @@ class MaptaskDataset(Dataset):
                     # each window contains 60 frames
                     prediction_windows = self.sliding_window(
                         pd.read_csv(f"{targets_path}/{f}")['target'].tolist() 
-                                    + [0] * self.n_predict_frame,
+                                    + [0] * (self.n_predict_frame - 1),
                         self.n_predict_frame
                     )
                     # split labels of whole wav into 60s (1200 frames) per window
@@ -82,7 +81,6 @@ class MaptaskDataset(Dataset):
             f"{self.dialogues_path}/{wav_file}",
             [
                 ["rate", str(self.sample_rate)],
-                ["norm"]
             ],
         )
         # pad if needed
@@ -118,8 +116,8 @@ class MaptaskDataset(Dataset):
 
     def sliding_window(self, labels, stride):
         prediction_windows = []
-        for i in range(0, len(labels) - stride, 1):
-            next_n_frame_labels = labels[i + 1 : i + 1 + stride]
+        for i in range(0, len(labels) - stride + 1, 1):
+            next_n_frame_labels = labels[i : i + stride]
             prediction_windows.append(next_n_frame_labels)
 
         return prediction_windows

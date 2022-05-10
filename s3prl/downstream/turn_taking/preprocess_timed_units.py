@@ -27,7 +27,7 @@ def get_preprocess_args():
     parser.add_argument('-i', '--input_path', default='./Data/', type=str, help='Path to your maptask time unit', required=False)
     parser.add_argument('-o', '--output_path', default='./Data_out/', type=str, help='Path to store output', required=False)
     parser.add_argument('-a', '--time_extension', default='.xml', type=str, help='time unit file type (.xml)', required=False)
-    parser.add_argument('-t', '--timestamp', default=50, type=int, help='timestamp you want to split', required=False)
+    parser.add_argument('-t', '--timestamp', default=1000, type=int, help='timestamp you want to split', required=False)
     parser.add_argument('--n_jobs', default=-1, type=int, help='Number of jobs used for computation', required=False)
 
     args = parser.parse_args()

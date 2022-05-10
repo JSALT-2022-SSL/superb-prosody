@@ -24,7 +24,7 @@ class Model(nn.Module):
             nn.Dropout(dropout)
         )
         # LSTM layer
-        self.lstm = nn.LSTM(input_size=input_dim, hidden_size=hidden_size,
+        self.lstm = nn.LSTM(input_size=input_dim, hidden_size=hidden_size, num_layers=1,
                             batch_first=True, bidirectional=False)
         # PReLU layer with clipping
         self.fc3 = nn.Sequential(
@@ -47,7 +47,13 @@ class Model(nn.Module):
         x = torch.reshape(x, (-1, timesteps, input_dim))
         x, _  = self.lstm(x, None)
 
+        hidden_dim = x.shape[-1]
+        x = torch.reshape(x, (-1, hidden_dim))
+        # shape: (batch_size * timesteps, output_dim)
+        x = self.fc3(x)
+        
         # shape: (batch_size, timesteps, output_dim)
-        out = self.fc3(x)
+        output_dim = x.shape[-1]
+        out = torch.reshape(x, (-1, timesteps, output_dim))
         
         return out

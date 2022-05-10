@@ -28,8 +28,7 @@ def get_split_table(args, element):
     full_path_names = glob.glob(os.path.join(f"{args.input_path}/{element}", "*"))
     id_names = [os.path.basename(path_name).split('.')[0] for path_name in full_path_names]
     id_names.remove('q6ec2') # data with missing values
-    raw_train_ids, test_ids = train_test_split(id_names, train_size=0.8, random_state=0)
-    train_ids, dev_ids = train_test_split(raw_train_ids, train_size=0.9, random_state=0)
+    train_ids, dev_ids = train_test_split(id_names, train_size=0.8, random_state=0, shuffle=False)
 
     train_ids_file = f"{args.output_path}/split-tables/train_ids.csv"
     os.makedirs((os.path.dirname(train_ids_file)), exist_ok=True)
@@ -55,12 +54,18 @@ def get_split_table(args, element):
     os.makedirs((os.path.dirname(test_ids_file)), exist_ok=True)
     f = open(test_ids_file, 'w')
     writer = csv.writer(f)
+    writer.writerow([' '])
+    '''
+    test_ids_file = f"{args.output_path}/split-tables/test_ids.csv"
+    os.makedirs((os.path.dirname(test_ids_file)), exist_ok=True)
+    f = open(test_ids_file, 'w')
+    writer = csv.writer(f)
     header = ['ids']
     writer.writerow(header)
     for test_id in test_ids:
         row = [test_id]
         writer.writerow(row)
-
+     '''
         
 ########
 # MAIN #

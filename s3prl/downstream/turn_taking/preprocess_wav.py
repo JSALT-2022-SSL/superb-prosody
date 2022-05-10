@@ -45,7 +45,6 @@ def get_preprocess_args():
 ##################
 def split_and_save(input_file, current_split, args):
     wav, sr = torchaudio.load(input_file)
-    
     # compute the size of each chunk
     chunk_size = args.split_size*sr
     quotient, remainder = divmod(wav.size(1), chunk_size)
