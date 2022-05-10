@@ -162,6 +162,8 @@ class DownstreamExpert(nn.Module):
                 print(acc)
         
         if torch.isfinite(loss):
+            if mode == "test":
+                self.__vis_prediction(predicted[0][:features_len[0]], labels[0][:features_len[0]], records)
             records['loss'].append(loss.item())
             if USEBIN:
                 records['acc'].append(acc.item())
@@ -171,6 +173,14 @@ class DownstreamExpert(nn.Module):
                 print("got you!")
 
         return loss
+
+    def __vis_prediction(self, pred, label, records):
+        import numpy as np
+        pred = pred.detach().cpu().numpy().squeeze(1)
+        pred = np.exp(pred)
+        label = label.detach().cpu().numpy().squeeze(1)
+        pred[label == 0] = 0
+        records["vis"].append((pred, label))
 
     # interface
     def log_records(self, mode, records, logger, global_step, **kwargs):
@@ -211,6 +221,20 @@ class DownstreamExpert(nn.Module):
                 with open(Path(self.expdir) / f"{mode}_acc.txt", "w") as file:
                     lines = [f"{x}\n" for x in records["acc"]]
                     file.writelines(lines)
+
+        # Visualization
+        from matplotlib import pyplot as plt
+        import numpy as np
+        os.makedirs("result/vis-energy-fbank-logmse", exist_ok=True)
+        if mode in ["test"]:
+            for i, (pred, label) in enumerate(records["vis"]):
+                plt.plot(np.arange(len(pred)), pred, color='r', label='Prediction')
+                plt.plot(np.arange(len(label)), label, color='b', label='Groundtruth')
+                plt.legend()
+                plt.savefig(f"result/vis-energy-fbank-logmse/{i}.png")
+                plt.clf()
+                if i == 9:
+                    break
 
         return save_names
 

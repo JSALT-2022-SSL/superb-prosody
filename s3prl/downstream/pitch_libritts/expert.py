@@ -85,7 +85,8 @@ class DownstreamExpert(nn.Module):
             self.loss_func = nn.CrossEntropyLoss(ignore_index=0)
 
         self.register_buffer('best_loss', torch.ones(1) * float('inf'))
-        # self.register_buffer('best_acc', torch.ones(1) * float('-inf'))
+        if USEBIN:
+            self.register_buffer('best_acc', torch.ones(1) * float('-inf'))
 
     def _get_train_dataloader(self, dataset):
         sampler = DistributedSampler(dataset) if is_initialized() else None
@@ -178,8 +179,8 @@ class DownstreamExpert(nn.Module):
         import numpy as np
         pred = pred.detach().cpu().numpy().squeeze(1)
         pred = np.exp(pred)
-        pred[pred < 2] = 0
         label = label.detach().cpu().numpy().squeeze(1)
+        pred[label == 0] = 0
         records["vis"].append((pred, label))
 
     # interface
@@ -225,13 +226,13 @@ class DownstreamExpert(nn.Module):
         # Visualization
         from matplotlib import pyplot as plt
         import numpy as np
-        os.makedirs("result/vis", exist_ok=True)
+        os.makedirs("result/vis-libri-fbank-logmse-yaapt", exist_ok=True)
         if mode in ["test"]:
             for i, (pred, label) in enumerate(records["vis"]):
                 plt.plot(np.arange(len(pred)), pred, color='r', label='Prediction')
                 plt.plot(np.arange(len(label)), label, color='b', label='Groundtruth')
                 plt.legend()
-                plt.savefig(f"result/vis/{i}.png")
+                plt.savefig(f"result/vis-libri-fbank-logmse-yaapt/{i}.png")
                 plt.clf()
                 if i == 9:
                     break
