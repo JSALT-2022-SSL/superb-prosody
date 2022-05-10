@@ -19,7 +19,7 @@ def collect_metrics(expname):
 
 def cv_score(fold_list):
     best_step, best_precision, best_recall, best_f1 = 0, 0, 0, 0
-    for i in range(1, len(fold_list[0]), 2):
+    for i in range(len(fold_list[0])):
         step = fold_list[0][i]['step']
         precision = np.mean([fold_list[j][i]['precision'] for j in range(5)])
         recall = np.mean([fold_list[j][i]['recall'] for j in range(5)])
