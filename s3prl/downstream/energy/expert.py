@@ -225,13 +225,13 @@ class DownstreamExpert(nn.Module):
         # Visualization
         from matplotlib import pyplot as plt
         import numpy as np
-        os.makedirs("result/vis-energy-fbank-logmse", exist_ok=True)
+        os.makedirs("result/vis-energy-hubert-logmse", exist_ok=True)
         if mode in ["test"]:
             for i, (pred, label) in enumerate(records["vis"]):
                 plt.plot(np.arange(len(pred)), pred, color='r', label='Prediction')
                 plt.plot(np.arange(len(label)), label, color='b', label='Groundtruth')
                 plt.legend()
-                plt.savefig(f"result/vis-energy-fbank-logmse/{i}.png")
+                plt.savefig(f"result/vis-energy-hubert-logmse/{i}.png")
                 plt.clf()
                 if i == 9:
                     break

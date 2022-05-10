@@ -260,7 +260,7 @@ class Featurizer(nn.Module):
         if isinstance(feature, (list, tuple)):
             feature = self._weighted_sum(feature)
             # visualize weights
-            # visualize(F.softmax(self.weights, dim=-1), "vis/fbank-logmse-w.jpg")        
+            # visualize(F.softmax(self.weights, dim=-1), "vis/energy-wav2vec2-logmse-w.jpg")
         return self.tolist(paired_wavs, feature)
 
 
