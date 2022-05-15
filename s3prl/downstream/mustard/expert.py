@@ -46,9 +46,9 @@ class DownstreamExpert(nn.Module):
 
         speaker_dependent = self.datarc['speaker_dependent']
         split_no = self.datarc['split_no'] if speaker_dependent else None
-        aug_config = downstream_expert['augmentation'] if 'augmentation' in downstream_expert else None
+        aug_config = downstream_expert.get('augmentation')
         self.train_dataset = SarcasmDataset('train', speaker_dependent, split_no, aug_config)
-        self.dev_dataset = SarcasmDataset('dev', speaker_dependent, split_no, aug_config)
+        self.dev_dataset = SarcasmDataset('dev', speaker_dependent, split_no)
         
         model_cls = eval(self.modelrc['select'])
         model_conf = self.modelrc.get(self.modelrc['select'], {})

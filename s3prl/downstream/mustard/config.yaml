@@ -1,6 +1,6 @@
 # Sarcasm detection task
 runner:
-  total_steps: 500
+  total_steps: 3000
   gradient_clipping: 1
   gradient_accumulate_steps: 1
 
@@ -23,17 +23,17 @@ optimizer:
 
 downstream_expert: 
   datarc:
-    num_workers: 12
-    train_batch_size: 32
+    num_workers: 4
+    train_batch_size: 8
     eval_batch_size: 1
     max_timestep: 128000
     speaker_dependent: False
 
   # Please refer to https://github.com/iver56/audiomentations for more augmentation options
   augmentation:
-    AddGaussianNoise:
-      min_amplitude: 0.001
-      max_amplitude: 0.015
+    AddGaussianSNR:
+      min_snr_in_db: 0
+      max_snr_in_db: 3
       p: 0.5
 
     TimeStretch:
@@ -41,9 +41,14 @@ downstream_expert:
       max_rate: 1.25
       p: 0.5
 
-    Shift:
-      min_fraction: -0.5
-      max_fraction: 0.5
+    # Shift:
+    #   min_fraction: -0.5
+    #   max_fraction: 0.5
+    #   p: 0.5
+
+    PitchShift:
+      min_semitones: -4
+      max_semitones: 4
       p: 0.5
 
     Gain:
