@@ -62,5 +62,5 @@ EXP_NAME=DLHLP_1
 UPSTREAM=fbank
 DOWNSTREAM=turn_taking
 
-python3 run_downstream.py -f -l -1 -m train -n $EXP_NAME -u $UPSTREAM -d $DOWNSTREAM
+python3 run_downstream.py -l 0 -m train -n $EXP_NAME -u $UPSTREAM -d $DOWNSTREAM
 ```

@@ -1,0 +1,33 @@
+runner:
+  total_steps: 20000
+  gradient_clipping: 1
+  gradient_accumulate_steps: 2
+
+  log_step: 361
+  eval_step: 361
+  save_step: 361
+  max_keep: 1
+  eval_dataloaders:
+    - dev
+
+optimizer:
+  name: Adam
+  lr: 1.0e-4
+
+downstream_expert:
+  datarc:
+    num_workers: 8
+    train_batch_size: 1
+    eval_batch_size: 1
+    maptask_targets_path: /work/b08901133/Data_out/timed-units
+    maptask_dialogues_path: /work/b08901133/Data_out/dialogues-splitted
+    split_tables: /work/b08901133/Data_out/split-tables
+    frame_size: 1000
+    sample_rate: 16000
+    wav_size: 60
+
+  modelrc:
+    projector_dim: 256
+    output_dim: 2
+    dropout: 0.25
+    hidden_size: 8
