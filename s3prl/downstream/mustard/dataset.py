@@ -67,15 +67,3 @@ class SarcasmDataset(Dataset):
 
     def collate_fn(self, samples):
         return zip(*samples)
-
-
-# training_data = SarcasmDataset('train', 0)
-# dev_data = SarcasmDataset('dev', 0)
-# print(len(training_data))
-# print(len(dev_data))
-
-# train_dataloader = DataLoader(training_data, batch_size=1, shuffle=True)
-# for i, data in enumerate(train_dataloader):
-#     if i > 10:
-#         break
-#     print(data[2])

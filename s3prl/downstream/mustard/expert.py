@@ -15,6 +15,8 @@ import math
 import torch
 import random
 import jsonlines
+import math
+import numpy as np
 #-------------#
 import torch
 import torch.nn as nn
@@ -41,7 +43,7 @@ class DownstreamExpert(nn.Module):
         self.downstream = downstream_expert
         self.datarc = downstream_expert['datarc']
         self.modelrc = downstream_expert['modelrc']
-        self.project = self.modelrc['project']
+        self.project = self.modelrc.get('project')
         self.expdir = expdir
 
         speaker_dependent = self.datarc['speaker_dependent']

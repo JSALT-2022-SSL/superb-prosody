@@ -1,12 +1,12 @@
 # Sarcasm detection task
 runner:
-  total_steps: 3000
+  total_steps: 1000
   gradient_clipping: 1
   gradient_accumulate_steps: 1
 
-  log_step: 20
-  eval_step: 20
-  save_step: 20
+  log_step: 50
+  eval_step: 50
+  save_step: 50
   max_keep: 1
   eval_dataloaders: 
     - dev
@@ -16,16 +16,11 @@ optimizer:
   torch_optim_name: Adam
   lr: 3.0e-5
 
-# # comment the whole scheduler config block to disable learning rate scheduling
-# scheduler:
-#   name: linear_schedule_with_warmup
-#   num_warmup_steps: 5000
-
 downstream_expert: 
   datarc:
-    num_workers: 4
-    train_batch_size: 8
-    eval_batch_size: 1
+    num_workers: 12
+    train_batch_size: 32
+    eval_batch_size: 8
     max_timestep: 128000
     speaker_dependent: False
 
@@ -40,11 +35,6 @@ downstream_expert:
       min_rate: 0.8
       max_rate: 1.25
       p: 0.5
-
-    # Shift:
-    #   min_fraction: -0.5
-    #   max_fraction: 0.5
-    #   p: 0.5
 
     PitchShift:
       min_semitones: -4
