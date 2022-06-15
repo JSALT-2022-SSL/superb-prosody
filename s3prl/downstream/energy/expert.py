@@ -12,6 +12,7 @@
 ###############
 import os
 import math
+from s3prl.downstream.pitch_libritts.expert import NEXT_FRAME
 import torch
 import random
 import pathlib
@@ -31,6 +32,7 @@ SAMPLE_RATE = 16000
 
 DEBUG = False
 USEBIN = False
+NEXT_FRAME = 6
 class DownstreamExpert(nn.Module):
     """
     Used to handle downstream-specific operations
@@ -132,6 +134,11 @@ class DownstreamExpert(nn.Module):
 
         features = pad_sequence(features, batch_first=True)
         labels = pad_sequence(labels, batch_first=True).to(device=device)
+
+        if NEXT_FRAME > 0:  # shift labels
+            # print(labels.shape)
+            labels = torch.roll(labels, -NEXT_FRAME, 1)
+            labels[:, -NEXT_FRAME:] = 0
 
         # Origin
         # features = self.projector(features)

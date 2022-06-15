@@ -260,16 +260,22 @@ class Featurizer(nn.Module):
         if isinstance(feature, (list, tuple)):
             feature = self._weighted_sum(feature)
             # visualize weights
-            # visualize(F.softmax(self.weights, dim=-1), "vis/energy-wav2vec2-logmse-w.jpg")
+            # visualize(F.softmax(self.weights, dim=-1), "result/vis/energy-wav2vec2-n6-w.jpg")
         return self.tolist(paired_wavs, feature)
 
 
 import os
 import numpy as np
 import matplotlib.pyplot as plt
+import pickle
 def visualize(x, dst):
     os.makedirs(os.path.dirname(dst), exist_ok=True)
     x = x.detach().cpu().numpy()
+    # with open("wav2vec2_layer_norm.pkl", 'rb') as f:
+    #     norm = pickle.load(f)
+    #     print(x)
+    #     print(norm)
+    #     x = x * norm.numpy()
     layers = [str(i) for i in range(13)]
     scores = x.tolist()
     x = np.arange(len(layers))
