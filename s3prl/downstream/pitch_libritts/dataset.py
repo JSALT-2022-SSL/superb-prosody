@@ -19,12 +19,15 @@ import pyworld as pw
 import amfm_decompy.pYAAPT as pYAAPT
 import amfm_decompy.basic_tools as basic
 
+from .reaper import REAPERExtractor
+
 
 CACHE_PATH = os.path.join(os.path.dirname(__file__), '.cache/')
 SAMPLE_RATE = 16000
 
 DEBUG = False
-USEYAAPT = True
+USEYAAPT = False
+USEREAPER = True
 USEBIN = False
 # LibriTTS pitch reconstruction
 class PitchDataset(Dataset):
@@ -59,6 +62,8 @@ class PitchDataset(Dataset):
         self.dataset = dataset
 
         cache_path = os.path.join(CACHE_PATH, f'{mode}-labels-{self.fp}.pkl')
+        if USEREAPER:
+            cache_path = os.path.join(CACHE_PATH, f'{mode}-reaper-labels-{self.fp}.pkl')
         if USEYAAPT:
             cache_path = os.path.join(CACHE_PATH, f'{mode}-yaapt-labels-{self.fp}.pkl')
         if USEBIN:
@@ -75,6 +80,8 @@ class PitchDataset(Dataset):
         self.label = all_labels
 
         cache_path = os.path.join(CACHE_PATH, f'{mode}-stats-{self.fp}.pkl')
+        if USEREAPER:
+            cache_path = os.path.join(CACHE_PATH, f'{mode}-reaper-stats-{self.fp}.pkl')
         if USEYAAPT:
             cache_path = os.path.join(CACHE_PATH, f'{mode}-yaapt-stats-{self.fp}.pkl')
         if os.path.isfile(cache_path):
@@ -101,7 +108,9 @@ class PitchDataset(Dataset):
 
     def build_label(self, path_list):
         y = {}
-        # new_path_list = []
+        if USEREAPER:
+            os.makedirs("./downstream/pitch_libritts/.tmp", exist_ok=True)
+            extractor = REAPERExtractor()
         for path in tqdm.tqdm(path_list, desc="Pitch extraction"):
             wav_path = self.name2path(path)
 
@@ -114,6 +123,24 @@ class PitchDataset(Dataset):
                     pitch = pYAAPT.yaapt(signal, **{'f0_min' : 71.0, 'f0_max' : 800.0, 'frame_space' : self.fp})
                     f0 = pitch.samp_values.astype(np.float64)
                     f0_pad[:len(f0)] = f0
+                    y[path] = f0_pad
+                except:
+                    print("Error detected: ", wav_path)
+                    y[path] = f0_pad
+            elif USEREAPER:
+                # REAPER
+                extractor = REAPERExtractor()
+                signal = basic.SignalObj(wav_path)
+                dio_len = int(signal.size * 1000 / SAMPLE_RATE / self.fp) + 1
+                f0_pad = np.zeros(dio_len, dtype=np.float64)
+                try:
+                    extractor.exec(
+                        wav_path=wav_path,
+                        output_path=f"./downstream/pitch_libritts/.tmp/{path[:-4]}",
+                        fp=self.fp / 1000
+                    )
+                    res = extractor.parse_f0_file(f"./downstream/pitch_libritts/.tmp/{path[:-4]}.f0")
+                    f0_pad[:len(res)] = np.array(res, dtype=np.float64)
                     y[path] = f0_pad
                 except:
                     print("Error detected: ", wav_path)
