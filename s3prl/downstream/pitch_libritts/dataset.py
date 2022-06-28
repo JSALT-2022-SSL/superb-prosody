@@ -26,8 +26,8 @@ CACHE_PATH = os.path.join(os.path.dirname(__file__), '.cache/')
 SAMPLE_RATE = 16000
 
 DEBUG = False
-USEYAAPT = False
-USEREAPER = True
+USEYAAPT = True
+USEREAPER = False
 USEBIN = False
 # LibriTTS pitch reconstruction
 class PitchDataset(Dataset):
