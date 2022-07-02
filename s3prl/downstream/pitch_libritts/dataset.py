@@ -26,8 +26,8 @@ CACHE_PATH = os.path.join(os.path.dirname(__file__), '.cache/')
 SAMPLE_RATE = 16000
 
 DEBUG = False
-USEYAAPT = True
-USEREAPER = False
+USEYAAPT = False
+USEREAPER = True
 USEBIN = False
 # LibriTTS pitch reconstruction
 class PitchDataset(Dataset):
@@ -63,7 +63,11 @@ class PitchDataset(Dataset):
 
         cache_path = os.path.join(CACHE_PATH, f'{mode}-labels-{self.fp}.pkl')
         if USEREAPER:
+            self.errors = 0
             cache_path = os.path.join(CACHE_PATH, f'{mode}-reaper-labels-{self.fp}.pkl')
+            default_cache_path = os.path.join(CACHE_PATH, f'{mode}-yaapt-labels-{self.fp}.pkl')
+            with open(default_cache_path, 'rb') as f:
+                self.default_labels = pickle.load(f)
         if USEYAAPT:
             cache_path = os.path.join(CACHE_PATH, f'{mode}-yaapt-labels-{self.fp}.pkl')
         if USEBIN:
@@ -109,7 +113,7 @@ class PitchDataset(Dataset):
     def build_label(self, path_list):
         y = {}
         if USEREAPER:
-            os.makedirs("./downstream/pitch_libritts/.tmp", exist_ok=True)
+            os.makedirs("./downstream/pitch_libritts/.tmp1", exist_ok=True)
             extractor = REAPERExtractor()
         for path in tqdm.tqdm(path_list, desc="Pitch extraction"):
             wav_path = self.name2path(path)
@@ -136,15 +140,16 @@ class PitchDataset(Dataset):
                 try:
                     extractor.exec(
                         wav_path=wav_path,
-                        output_path=f"./downstream/pitch_libritts/.tmp/{path[:-4]}",
+                        output_path=f"./downstream/pitch_libritts/.tmp1/{path[:-4]}",
                         fp=self.fp / 1000
                     )
-                    res = extractor.parse_f0_file(f"./downstream/pitch_libritts/.tmp/{path[:-4]}.f0")
+                    res = extractor.parse_f0_file(f"./downstream/pitch_libritts/.tmp1/{path[:-4]}.f0")
                     f0_pad[:len(res)] = np.array(res, dtype=np.float64)
                     y[path] = f0_pad
                 except:
+                    self.errors += 1
                     print("Error detected: ", wav_path)
-                    y[path] = f0_pad
+                    y[path] = self.default_labels[path]
             else:
                 # pyWorld
                 wav, _ = librosa.load(wav_path, sr=SAMPLE_RATE)
@@ -152,6 +157,7 @@ class PitchDataset(Dataset):
                 pitch = pw.stonemask(wav.astype(np.float64), pitch, t, SAMPLE_RATE)
                 y[path] = pitch
 
+        print("ERROR: ", self.errors)
         return y
     
     def build_stats(self):

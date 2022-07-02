@@ -12,7 +12,6 @@
 ###############
 import os
 import math
-from s3prl.downstream.pitch_libritts.expert import temp_define.NEXT_FRAME
 import torch
 import random
 import pathlib
