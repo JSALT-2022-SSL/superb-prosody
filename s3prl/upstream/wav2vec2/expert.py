@@ -68,6 +68,8 @@ class UpstreamExpert(UpstreamBase):
         results = self.model.extract_features(
             padded_wav, wav_padding_mask if self.apply_padding_mask else None
         )
-
+        return {
+            'hubert': True
+        }
         # This forward function only does the model forward
         # The return dict is then handled by UpstreamBase's hooks

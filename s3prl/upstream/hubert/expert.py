@@ -74,6 +74,8 @@ class UpstreamExpert(UpstreamBase):
             padding_mask=wav_padding_mask,
             mask=None,
         )
-
+        return {
+            "hubert": True
+        }
         # This forward function only does the model forward
         # The return dict is then handled by UpstreamBase's hooks

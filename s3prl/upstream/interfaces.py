@@ -128,6 +128,10 @@ class UpstreamBase(nn.Module, metaclass=initHook):
             for layer_id, hidden_state in enumerate(result["hidden_states"]):
                 result[f"hidden_state_{layer_id}"] = hidden_state
 
+            if result.get("hubert"):
+                del result['hubert']
+                result["hidden_state_01x"] = torch.cat((result["hidden_states"][0], result["hidden_states"][1], result["hidden_states"][-1]), dim=2)
+                result["hidden_state_x"] = torch.cat((result["hidden_states"][-3], result["hidden_states"][-2], result["hidden_states"][-1]), dim=2)
         return result
 
 
@@ -168,7 +172,10 @@ class Featurizer(nn.Module):
         self.feature_selection = feature_selection
         self.layer_selection = layer_selection
         self.normalize = normalize
-
+        show(
+            f"[{self.name}] - {self.feature_selection = }",
+            file=sys.stderr
+        )
         feature = self._select_feature(paired_features)
         if isinstance(feature, (list, tuple)):
             self.layer_num = len(feature)
