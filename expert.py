@@ -46,7 +46,7 @@ def main(args):
     test_loader = DataLoader(testset, batch_size=args.batch_size, shuffle=False)
     
     # set optimizer and objection function
-    optimizer = optim.Adam(downstream.parameters(), lr=args.lr, weight_decay=1e-5)
+    optimizer = optim.Adam(downstream.parameters(), lr=args.lr)
     criterion = nn.CrossEntropyLoss()
 
     # set acc and epoch
