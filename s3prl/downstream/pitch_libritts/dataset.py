@@ -156,8 +156,8 @@ class PitchDataset(Dataset):
                 pitch, t = pw.dio(wav.astype(np.float64), SAMPLE_RATE, frame_period=self.fp)
                 pitch = pw.stonemask(wav.astype(np.float64), pitch, t, SAMPLE_RATE)
                 y[path] = pitch
-
-        print("ERROR: ", self.errors)
+        if USEREAPER:
+            print("ERROR: ", self.errors)
         return y
     
     def build_stats(self):
