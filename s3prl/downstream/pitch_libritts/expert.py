@@ -30,6 +30,8 @@ from argparse import Namespace
 from pathlib import Path
 from ... import temp_define
 
+from s3prl import temp_define
+
 SAMPLE_RATE = 16000
 
 DEBUG = False
