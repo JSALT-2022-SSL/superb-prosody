@@ -260,7 +260,7 @@ class Featurizer(nn.Module):
         if isinstance(feature, (list, tuple)):
             feature = self._weighted_sum(feature)
             # visualize weights
-            # visualize(F.softmax(self.weights, dim=-1), "result/vis/energy-wav2vec2-n6-w.jpg")
+            # visualize(F.softmax(self.weights, dim=-1), f"result/WN/energy-modified_cpc.txt")
         return self.tolist(paired_wavs, feature)
 
 
@@ -271,18 +271,22 @@ import pickle
 def visualize(x, dst):
     os.makedirs(os.path.dirname(dst), exist_ok=True)
     x = x.detach().cpu().numpy()
-    # with open("wav2vec2_layer_norm.pkl", 'rb') as f:
-    #     norm = pickle.load(f)
-    #     print(x)
-    #     print(norm)
-    #     x = x * norm.numpy()
-    layers = [str(i) for i in range(13)]
+    print(x)
+    with open("modified_cpc_norms.pkl", 'rb') as f:
+        norm = pickle.load(f)
+        for idx, v in norm.items():
+            x[idx] *= v
+    print(x)
+    layers = [str(i) for i in range(len(x))]
     scores = x.tolist()
     x = np.arange(len(layers))
-    plt.bar(x, scores)
-    plt.xticks(x, layers)
-    plt.xlabel('Layers')
-    plt.ylabel('Weight')
-    plt.title('Featurizer Weights')
-    plt.savefig(dst)
+    with open(dst, 'w', encoding="utf-8") as f:
+        for i, score in enumerate(scores):
+            f.write(f"{i} {score}\n")
+    # plt.bar(x, scores)
+    # plt.xticks(x, layers)
+    # plt.xlabel('Layers')
+    # plt.ylabel('Weight')
+    # plt.title('Featurizer Weights')
+    # plt.savefig(dst)
     assert 1 == 2

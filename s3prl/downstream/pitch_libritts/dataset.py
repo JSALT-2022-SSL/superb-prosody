@@ -108,7 +108,7 @@ class PitchDataset(Dataset):
             if USEYAAPT:
                 # pYAAPT
                 signal = basic.SignalObj(wav_path)
-                dio_len = int(signal.size * 1000 / SAMPLE_RATE / self.fp) + 1
+                dio_len = int(signal.size * 1000 / signal.fs / self.fp) + 1
                 f0_pad = np.zeros(dio_len, dtype=np.float64)
                 try:
                     pitch = pYAAPT.yaapt(signal, **{'f0_min' : 71.0, 'f0_max' : 800.0, 'frame_space' : self.fp})

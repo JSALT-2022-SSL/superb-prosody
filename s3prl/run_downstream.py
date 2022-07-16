@@ -16,6 +16,7 @@ from s3prl import hub
 from s3prl import downstream
 from s3prl.downstream.runner import Runner
 from s3prl.utility.helper import backup, get_time_tag, hack_isinstance, is_leader_process, override
+from s3prl import temp_define
 
 from huggingface_hub import HfApi, HfFolder
 
@@ -88,6 +89,8 @@ def get_downstream_args():
     parser.add_argument('--verbose', action='store_true', help='Print model infomation')
     parser.add_argument('--disable_cudnn', action='store_true', help='Disable CUDNN')
 
+    parser.add_argument('--next_frame', default=0, type=int)
+
     args = parser.parse_args()
     backup_files = []
 
@@ -99,6 +102,9 @@ def get_downstream_args():
             ckpt_pths = glob.glob(f'{args.expdir}/states-*.ckpt')
             if len(ckpt_pths) > 0:
                 args.past_exp = args.expdir
+
+    temp_define.NEXT_FRAME = args.next_frame
+    print(temp_define.NEXT_FRAME)
 
     if args.past_exp:
         # determine checkpoint path
