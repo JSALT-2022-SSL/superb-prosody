@@ -6,8 +6,8 @@ import sys
 audio_path_root = sys.argv[1]
 
 audio_path = os.path.join(audio_path_root, "Full/WAV_16000")
-label_path = "./utility/CMU_MOSEI_Labels.csv"
-out_path = os.path.join(audio_path_root, "Segmented_Audio")
+label_path = "./utility/CMU_MOSEI_Labels_new.csv"
+out_path = os.path.join(audio_path_root, "Segmented_Audio_new")
 
 if not os.path.exists(out_path):
     os.makedirs(out_path)
