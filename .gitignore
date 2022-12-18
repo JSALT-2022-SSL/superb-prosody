@@ -135,7 +135,10 @@ log_*
 Raw
 CMU_MOSI.zip
 libri_alignment.zip
-data
+#data
+audios
+context_final
+utterances_final
 
 # checkpoints
 *.ckpt
