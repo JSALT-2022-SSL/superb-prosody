@@ -36,13 +36,11 @@ python run_downstream.py -m train -u fbank -d mustard
 ```
 
 ## Sentiment Analysis
-### Dataset preparation
-### Training
+Due to the change of [privacy policy](https://github.com/A2Zadeh/CMU-MultimodalSDK) of the CMU-MOSEI dataset, raw audios aren't available. We will update this track when the raw audios link for CMU-MOSEI reopen.
 
 
 ## Persuasiveness Prediction
-### Dataset preparation
-### Training
+Due to the change of [privacy policy](https://github.com/A2Zadeh/CMU-MultimodalSDK) of the POM dataset, raw audios aren't available. We will update this track when the raw audios link for POM reopen.
 
 
 ## Prosody Reconstruction
