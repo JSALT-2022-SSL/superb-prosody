@@ -45,12 +45,3 @@ Due to the change of [privacy policy](https://github.com/A2Zadeh/CMU-MultimodalS
 
 ## Persuasiveness Prediction
 Due to the change of [privacy policy](https://github.com/A2Zadeh/CMU-MultimodalSDK) of the POM dataset, raw audios aren't available. We will update this track when the raw audios link for POM reopen.
-
-
-## Prosody Reconstruction
-### Dataset preparation
-### Training
-
-
-
-
