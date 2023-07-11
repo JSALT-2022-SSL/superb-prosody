@@ -22,7 +22,6 @@ sudo apt install libsndfile1 sox ffmpeg
 cd s3prl
 pip install -e .
 pip install jsonlines audiomentations
-...
 ```
 
 ## Sarcasm Detection
