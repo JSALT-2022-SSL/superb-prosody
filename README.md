@@ -8,7 +8,6 @@ There are five sections in this README.
 - Sarcasm Detection
 - Sentiment Analysis
 - Persuasiveness Prediction
-- Prosody Reconstruction
 
 ## Environment setting
 
