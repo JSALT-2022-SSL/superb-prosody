@@ -27,6 +27,11 @@ pip install jsonlines audiomentations
 
 1. Download data from [link](https://drive.google.com/file/d/1i9ixalVcXskA5_BkNnbR60sqJqvGyi6E/view) 
 2. unzip the file under `/superb-prosody/s3prl/downstream/mustard/data/videos`
+3. Extract the video, run the below script under superb-prosody/s3prl/downstream
+/mustard/
+```
+bash extract_audio_files.sh
+```
 
 ### Training
 Use below script to train the sarcasm detection
